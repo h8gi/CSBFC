@@ -1,7 +1,12 @@
 CSBFC
 =====
 
-chicken-scheme-brainfuck-compiler
+chicken-scheme-brainfuck-compiler  
+ブレインファックのコンパイラーです  
 
-ブレインファックのコンパイラーです
-bfc hello.bf => hello.scm helloの2ファイルができます
+```
+$ csc bfc.scm
+```
+してください  
+
+bfc hello.bf => hello.scm helloの2ファイルができます  
