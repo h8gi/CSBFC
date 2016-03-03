@@ -9,6 +9,8 @@ chicken scheme brainfuck compiler
 
 ## Usage
 
+`chicken-install`すると多分`/usr/local/bin`以下に`csbfc`という実行ファイルができます。
+
 ~~~~~{.sh}
 csbfc - chicken scheme brainfuck compiler
 Usage: csbfc FILENAME | OPTION ...
@@ -16,7 +18,6 @@ Usage: csbfc FILENAME | OPTION ...
     -n -no-optimize     no optimize
     -d -debug           debug mode%
 ~~~~~
-
 
 ## 参考サイト 
 
