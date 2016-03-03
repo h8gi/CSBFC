@@ -130,6 +130,7 @@
     [('bf-while ((or 'bf-inc!
                      'bf-dec!) n))
      '(bf-clear)]
+    ;; [
     [('bf-while . while-body)
      (let ([body (once-dec-loop? while-body)])
        (if body

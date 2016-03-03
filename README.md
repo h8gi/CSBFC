@@ -17,7 +17,7 @@ csbfc - chicken scheme brainfuck compiler
 Usage: csbfc FILENAME | OPTION ...
     -h -help            display this text and exit
     -n -no-optimize     no optimize
-    -d -debug           debug mode%
+    -d -debug           debug mode
 ~~~~~
 
 ## 参考サイト 
