@@ -13,7 +13,11 @@
                  (display "(use bf-lib)")
                  (with-input-from-file filename
                    (lambda () (bf-compile)))))
-             (system (conc "csc " (if (bf-debug) "-profile " "") outfile " -o " (or (bf-outfile) body)))
+             (system (conc "csc "
+                           (if (bf-optimize) " -O5 " "")
+                           (if (bf-debug) "-profile " "")
+                           outfile
+                           " -o " (or (bf-outfile) body)))
              ;(system (conc "rm " outfile))
              ))]
         [else (error "specify .bf source file" filename)]))

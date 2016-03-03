@@ -76,7 +76,7 @@
      [(legal? ch) ch]
      [else (skip-read-char)])))
 
-
+;;; stdin -> stdout
 (define (bf-compress)
   (let loop ([ch (skip-read-char)]
              [run? #f]
@@ -113,7 +113,9 @@
   (when (bf-debug)
     (newline)))
 
-;;; S式への変換 それに対する最適化
+;;; S式へ変換 して 最適化 ------------------------------------------------------------
+
+;;; 変換
 (define (->sexp str)
   (with-input-from-string str
     (lambda ()
@@ -122,24 +124,6 @@
         (if (eof-object? sexp)
             (reverse! acc)
             (loop (read) (cons sexp acc)))))))
-
-(define (compile-sexp sexp)
-  (match sexp
-    ;; [-] などを (bf-clear) に変換
-    ;; [+]もどうせ無限ループなのでclearする
-    [('bf-while ((or 'bf-inc!
-                     'bf-dec!) n))
-     '(bf-clear)]
-
-    [('bf-while . while-body)
-     (let ([body (once-dec-loop? while-body)])
-       (if body
-           (let ([scaned (scan-copy-loop body)])
-             (if scaned
-                 (cons 'begin scaned)
-                 (cons 'bf-while while-body)))
-           (cons 'bf-while while-body)))]    
-    [else sexp]))
 
 (define (fd? x)
   (eq? 'bf-fd! (car x)))
@@ -156,6 +140,7 @@
 (define (once-dec? x)
   (and (dec? x) (= 1 (val x))))
 
+;;; loop の 最適化
 ;;; 頭かおしりで - しているかどうか
 (define (once-dec-loop? while-body)
   (cond [(once-dec? (car while-body))
@@ -169,40 +154,75 @@
    (lambda (k)
      (let loop ([lst while-body]
                 [fdcount 0]
+                [bkcount 0]
                 [wait? #f]
                 [acc '()])
        (if (null? lst)
            (k #f)
            (let ([x (car lst)])
              (cond
-              [(fd? x)
-               (loop (cdr lst)
-                     (+ fdcount (val x))
-                     #t
-                     acc)]
+     
               [(and (inc? x) wait?)
                (loop (cdr lst)
                      fdcount
-                     #t
-                     (cons `(bf-copy ,fdcount ,(val x))
+                     bkcount
+                     #f
+                     (cons `(bf-copy ,(- fdcount bkcount) ,(val x))
                            acc))]
               [(and (dec? x) wait?)
                (loop (cdr lst)
                      fdcount
-                     #t
-                     (cons `(bf-copy ,fdcount ,(- (val x)))
+                     bkcount
+                     #f
+                     (cons `(bf-copy ,(- fdcount bkcount) ,(- (val x)))
                            acc))]
-              [(and (bk? x) (null? (cdr lst)) (= (val x) fdcount))
+              
+              [(and (bk? x) (null? (cdr lst)) (= (+ (val x) bkcount) fdcount))
+               (reverse! (cons '(bf-clear) acc))]         
+              [(and (fd? x) (null? (cdr lst)) (= (+ (val x) fdcount) bkcount))
                (reverse! (cons '(bf-clear) acc))]
+              
+              [(fd? x)
+               (loop (cdr lst)
+                     (+ fdcount (val x))
+                     bkcount
+                     #t
+                     acc)]
+              [(bk? x)                  ; test
+               (loop (cdr lst)
+                     fdcount
+                     (+ bkcount (val x))
+                     #t
+                     acc)]
               [else (k #f)])))))))
+
+
+(define (compile-while sexp)
+  (match sexp
+    ;; [-] などを (bf-clear) に変換
+    ;; [+]もどうせ無限ループなのでclearする
+    [('bf-while ((or 'bf-inc!
+                     'bf-dec!) n))
+     '(bf-clear)]
+
+    [('bf-while . while-body)
+     (let ([body (once-dec-loop? while-body)])
+       (if body
+           (let ([scaned (scan-copy-loop body)])
+             (if scaned
+                 (cons 'bf-begin scaned)
+                 sexp))
+           sexp))]
+    [else sexp]))
 
 ;;; whileに対しては再帰?
 (define (compile-sexp-rec sexp)
-  (if (and (pair? sexp) (while? sexp))
-      (compile-sexp (map compile-sexp-rec sexp))
-      (compile-sexp sexp)))
+  (cond [(and (pair? sexp) (while? sexp))
+         (compile-while (map compile-sexp-rec sexp))]
+        [else sexp]))
 
 ;;; 標準入力から標準出力へ
+
 (define (bf-compile)
   (if (bf-optimize)
       (let ([str (with-output-to-string bf-compress)])
