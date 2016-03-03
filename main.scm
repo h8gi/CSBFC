@@ -130,7 +130,7 @@
     [('bf-while ((or 'bf-inc!
                      'bf-dec!) n))
      '(bf-clear)]
-    ;; [
+
     [('bf-while . while-body)
      (let ([body (once-dec-loop? while-body)])
        (if body
@@ -185,6 +185,12 @@
                      fdcount
                      #t
                      (cons `(bf-copy ,fdcount ,(val x))
+                           acc))]
+              [(and (dec? x) wait?)
+               (loop (cdr lst)
+                     fdcount
+                     #t
+                     (cons `(bf-copy ,fdcount ,(- (val x)))
                            acc))]
               [(and (bk? x) (null? (cdr lst)) (= (val x) fdcount))
                (reverse! (cons '(bf-clear) acc))]

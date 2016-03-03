@@ -7,16 +7,18 @@
   (define tape (make-vector tape-length 0))
   (define (*pointer)
     (vector-ref tape pointer))
+  (define (tape-inc! pos val)
+    (vector-set! tape pos
+                 (+ (vector-ref tape pos)
+                    val)))
 
 ;;; +
   (define (bf-inc! #!optional (val 1))
-    (vector-set! tape pointer
-                 (+ (*pointer) val)))
+    (tape-inc! pointer val))
 
 ;;; - not use
   (define (bf-dec! #!optional (val 1))
-    (vector-set! tape pointer
-                 (- (*pointer) val)))
+    (tape-inc! pointer (- val)))
 
 ;;; >
   (define (bf-fd! #!optional (val 1))
@@ -48,14 +50,11 @@
 ;;; clear [-]
   (define (bf-clear)
     (vector-set! tape pointer 0))
-
+  
 ;;; copy 
   (define (bf-copy pos mul)
-    (vector-set! tape
-                 (+ pointer pos)        ; pos ずれた場所を
-                 (+ (vector-ref tape (+ pointer pos))
-                    (* (*pointer) mul)) ; mul倍にコピーして足し算
-                 ))
+    (tape-inc! (+ pointer pos)
+               (* (*pointer) mul)))
+;;; scan
+
 )
-
-
