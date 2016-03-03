@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # csbfc
 
 chicken scheme brainfuck compiler
