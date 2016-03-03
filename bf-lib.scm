@@ -48,6 +48,14 @@
 ;;; clear [-]
   (define (bf-clear)
     (vector-set! tape pointer 0))
+
+;;; copy 
+  (define (bf-copy pos mul)
+    (vector-set! tape
+                 (+ pointer pos)        ; pos ずれた場所を
+                 (+ (vector-ref tape (+ pointer pos))
+                    (* (*pointer) mul)) ; mul倍にコピーして足し算
+                 ))
 )
 
 

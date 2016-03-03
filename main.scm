@@ -9,13 +9,13 @@
     [(#\+) "(bf-inc! 1)"]
     
     ;; --(*ptr)
-    [(#\-) "(bf-inc! -1)"]
+    [(#\-) "(bf-dec! 1)"]
 
     ;; ++ptr
     [(#\>) "(bf-fd! 1)"]
 
     ;; --ptr
-    [(#\<) "(bf-fd! -1)"]
+    [(#\<) "(bf-bk! 1)"]
 
     ;; *ptr = getchar()
     [(#\,) "(bf-getc)"]
@@ -35,10 +35,10 @@
 (define (expand-char char count)
   (conc "("
         (case char
-          [(#\+ #\-) "bf-inc!"]
-          [(#\> #\<) "bf-fd!"]
+          [(#\+ #\-) (if (positive? count) "bf-inc!" "bf-dec!")]
+          [(#\> #\<) (if (positive? count) "bf-fd!" "bf-bk!")]
           [else (error "fuck up")])
-        " " count ")"))
+        " " (abs count) ")"))
 
 (define (compressable? ch)
   (case ch
@@ -124,14 +124,34 @@
 
 (define (compile-sexp sexp)
   (match sexp
-    [('bf-while ('bf-inc! (? negative? n))) ; [-] などを (bf-clear) に変換
+    ;; [-] などを (bf-clear) に変換
+    ;; [+]もどうせ無限ループなのでclearする
+    [('bf-while ((or 'bf-inc!
+                     'bf-dec!) n))
      '(bf-clear)]
+    [('bf-while ('bf-dec! 1)
+                ('bf-fd! pos)
+                ('bf-inc! val)
+                ('bf-bk! pos))
+     `(begin (bf-copy ,pos ,val)
+             (bf-clear))]
+    [('bf-while ('bf-fd! pos)
+                ('bf-inc! val)
+                ('bf-bk! pos)
+                ('bf-dec! 1))
+     `(begin (bf-copy ,pos ,val)
+             (bf-clear))]
     [else sexp]))
+
+(define (compile-sexp-rec sexp)
+  (if (pair? sexp)
+      (compile-sexp (map compile-sexp-rec sexp))
+      (compile-sexp sexp)))
 
 ;;; 標準入力から標準出力へ
 (define (bf-compile)
   (if (bf-optimize)
       (let ([str (with-output-to-string bf-compress)])
-        (for-each (lambda (sexp) (bf-display (compile-sexp sexp)))
+        (for-each (lambda (sexp) (bf-display (compile-sexp-rec sexp)))
                   (->sexp str)))
       (bf-raw-compile)))
