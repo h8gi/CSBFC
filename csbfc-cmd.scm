@@ -23,6 +23,7 @@ csbfc - chicken scheme brainfuck compiler
 Usage: csbfc FILENAME | OPTION ...
     -h -help        display this text and exit
     -d -debug       debug mode
+
 END
 
 (current-error-port)
