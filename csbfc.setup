@@ -1,11 +1,21 @@
 ;;; csbfc.setup
 
 ;;; コンパイル
-(compile -s -O3 -d1 "csbfc.scm" -j csbfc)
-(compile -s -O3 -d0 "csbfc.import.scm")
+(compile -s -O2 -d0 "csbfc.scm" -j csbfc)
+(compile -s -O2 -d0 "csbfc.import.scm")
+
+(compile -s -O2 -d0 "bf-lib.scm" -j bf-lib)
+(compile -s -O2 -d0 "bf-lib.import.scm")
+
+(compile -o csbfc -O2 -d0 "csbfc-cmd.scm")
 
 ;;; インストール
 (install-extension
  'csbfc
- '("csbfc.so" "csbfc.import.so")
+ '("csbfc.so" "csbfc.import.so" "bf-lib.import.so" "bf-lib.so")
+ '((version 1.0)))
+
+(install-program
+ 'csbfc-cmd
+ '("csbfc")
  '((version 1.0)))
