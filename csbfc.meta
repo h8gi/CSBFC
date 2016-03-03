@@ -1,0 +1,5 @@
+;;; csbfc.meta
+((author "yagihiroki")
+ (synopsis "csbfc")
+ (license "MIT license http://opensource.org/licenses/mit-license.php")
+ (files "main.scm" "csbfc.scm" "csbfc.setup" "csbfc.meta"))

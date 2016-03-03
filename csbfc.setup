@@ -1,0 +1,11 @@
+;;; csbfc.setup
+
+;;; コンパイル
+(compile -s -O3 -d1 "csbfc.scm" -j csbfc)
+(compile -s -O3 -d0 "csbfc.import.scm")
+
+;;; インストール
+(install-extension
+ 'csbfc
+ '("csbfc.so" "csbfc.import.so")
+ '((version 1.0)))
