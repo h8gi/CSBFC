@@ -43,5 +43,5 @@
       [(_ expr ...)
        (let loop ()
          (unless (zero? (*pointer))
-           expr ...))]))
-  )
+           expr ...
+           (loop)))])))

@@ -1,5 +1,7 @@
-(use (only data-structures conc))
+(use data-structures)
 ;;; main.scm    main source file
+(define bf-debug (make-parameter #f))
+
 (define (convert-char char)
   (case char
     ;; ++(*ptr)
@@ -50,37 +52,48 @@
     [else #f]))
 
 (define (skip-read-char)
-  (cond [(legal? (read-char)) => identity]
-        [else (skip-read-char)]))
+  (let ([ch (read-char)])
+    (cond
+     [(eof-object? ch) ch]
+     [(legal? ch) ch]
+     [else (skip-read-char)])))
 
-(define (compress)
+(define (bf-compress)
   (let loop ([ch (skip-read-char)]
              [run? #f]
              [count 0])
     (cond [(eof-object? ch)
            (if run?
-               (display (expand-char run? count))
-               (display (convert-char ch)))]
+               (bf-display (expand-char run? count))
+               (bf-display (convert-char ch)))]
           [run?                         ; 今まで連続していた
            (cond [(char=? run? ch)      ; まだまだ連続
                   (loop (skip-read-char) run? (add1 count))]
                  [(compressable? ch)    ; 連続の起点
-                  (display (expand-char run? count))
+                  (bf-display (expand-char run? count))
                   (loop (skip-read-char) ch 1)]
                  [else                  ; 普通に処理
-                  (display (expand-char run? count)) ; 今までの
-                  (display (convert-char ch)) ; 今の
+                  (bf-display (expand-char run? count)) ; 今までの
+                  (bf-display (convert-char ch)) ; 今の
                   (loop (skip-read-char) #f 0)])]
           [else
            (cond [(compressable? ch)
                   (loop (skip-read-char) ch 1)]
                  [else
-                  (display (convert-char ch))
+                  (bf-display (convert-char ch))
                   (loop (skip-read-char) #f 0)])])))
 
-(define (bf-compile)
-  ;; (let ([ch (read-char)])
-  ;;   (unless (eof-object? ch)
-  ;;     (display (convert-char ch))
-  ;;     (bf-compile)))
-  (compress))
+(define (bf-raw-compile)
+  (let ([ch (read-char)])
+    (unless (eof-object? ch)
+      (bf-display (convert-char ch))
+      (bf-raw-compile))))
+
+(define (bf-compile #!optional (optimize #t))
+  (if optimize
+      (bf-compress)
+      (bf-raw-compile)))
+
+(define (bf-display str)
+  (display str)
+  (when (bf-debug) (newline)))
