@@ -22,17 +22,3 @@ Usage: csbfc FILENAME | OPTION ...
 ## 参考サイト 
 
 * [http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html)
-=======
-CSBFC
-=====
-
-chicken-scheme-brainfuck-compiler  
-ブレインファックのコンパイラーです  
-
-```
-$ csc bfc.scm
-```
-してください  
-
-bfc hello.bf => hello.scm helloの2ファイルができます  
->>>>>>> 3907c503ab44e69ec00e8f29f746d0b469795e80
