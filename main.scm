@@ -70,7 +70,8 @@
                   (loop (read-char) #f 0)])])))
 
 (define (bf-compile)
-  (let ([ch (read-char)])
-    (unless (eof-object? ch)
-      (display (convert-char ch))
-      (bf-compile))))
+  ;; (let ([ch (read-char)])
+  ;;   (unless (eof-object? ch)
+  ;;     (display (convert-char ch))
+  ;;     (bf-compile)))
+  (compress))
