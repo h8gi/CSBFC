@@ -13,7 +13,7 @@
     (vector-set! tape pointer
                  (+ (*pointer) val)))
 
-;;; -
+;;; - not use
   (define (bf-dec! #!optional (val 1))
     (vector-set! tape pointer
                  (- (*pointer) val)))
@@ -22,7 +22,7 @@
   (define (bf-fd! #!optional (val 1))
     (set! pointer (+ pointer val)))
 
-;;; <
+;;; < not use
   (define (bf-bk! #!optional (val 1))
     (set! pointer (- pointer val)))
 
@@ -44,4 +44,10 @@
        (let loop ()
          (unless (zero? (*pointer))
            expr ...
-           (loop)))])))
+           (loop)))]))
+;;; clear [-]
+  (define (bf-clear)
+    (vector-set! tape pointer 0))
+)
+
+

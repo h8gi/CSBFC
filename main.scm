@@ -1,20 +1,21 @@
-(use data-structures)
+(use data-structures matchable ports srfi-1)
 ;;; main.scm    main source file
 (define bf-debug (make-parameter #f))
+(define bf-optimize (make-parameter #t))
 
 (define (convert-char char)
   (case char
     ;; ++(*ptr)
-    [(#\+) "(bf-inc!)"]
+    [(#\+) "(bf-inc! 1)"]
     
     ;; --(*ptr)
-    [(#\-) "(bf-dec!)"]
+    [(#\-) "(bf-inc! -1)"]
 
     ;; ++ptr
-    [(#\>) "(bf-fd!)"]
+    [(#\>) "(bf-fd! 1)"]
 
     ;; --ptr
-    [(#\<) "(bf-bk!)"]
+    [(#\<) "(bf-fd! -1)"]
 
     ;; *ptr = getchar()
     [(#\,) "(bf-getc)"]
@@ -75,6 +76,7 @@
      [(legal? ch) ch]
      [else (skip-read-char)])))
 
+
 (define (bf-compress)
   (let loop ([ch (skip-read-char)]
              [run? #f]
@@ -106,11 +108,30 @@
       (bf-display (convert-char ch))
       (bf-raw-compile))))
 
-(define (bf-compile #!optional (optimize #t))
-  (if optimize
-      (bf-compress)
-      (bf-raw-compile)))
-
 (define (bf-display str)
   (display str)
   (when (bf-debug) (newline)))
+
+;;; S式への変換 それに対する最適化
+(define (->sexp str)
+  (with-input-from-string str
+    (lambda ()
+      (let loop ([sexp (read)]
+                 [acc '()])
+        (if (eof-object? sexp)
+            (reverse! acc)
+            (loop (read) (cons sexp acc)))))))
+
+(define (compile-sexp sexp)
+  (match sexp
+    [('bf-while ('bf-inc! (? negative? n))) ; [-] などを (bf-clear) に変換
+     '(bf-clear)]
+    [else sexp]))
+
+;;; 標準入力から標準出力へ
+(define (bf-compile)
+  (if (bf-optimize)
+      (let ([str (with-output-to-string bf-compress)])
+        (for-each (lambda (sexp) (bf-display (compile-sexp sexp)))
+                  (->sexp str)))
+      (bf-raw-compile)))
