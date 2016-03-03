@@ -3,3 +3,5 @@
 *.html
 *.import.scm
 *.o
+csbfc
+test/
