@@ -1,3 +1,4 @@
+(use (only data-structures conc))
 ;;; main.scm    main source file
 (define (convert-char char)
   (case char
