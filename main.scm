@@ -1,4 +1,4 @@
-(use data-structures matchable ports srfi-1)
+(use data-structures matchable ports srfi-1 (only traversal but-last))
 ;;; main.scm    main source file
 (define bf-debug (make-parameter #f))
 (define bf-optimize (make-parameter #t))
@@ -110,7 +110,8 @@
 
 (define (bf-display str)
   (display str)
-  (when (bf-debug) (newline)))
+  (when (bf-debug)
+    (newline)))
 
 ;;; S式への変換 それに対する最適化
 (define (->sexp str)
@@ -129,22 +130,68 @@
     [('bf-while ((or 'bf-inc!
                      'bf-dec!) n))
      '(bf-clear)]
-    [('bf-while ('bf-dec! 1)
-                ('bf-fd! pos)
-                ('bf-inc! val)
-                ('bf-bk! pos))
-     `(begin (bf-copy ,pos ,val)
-             (bf-clear))]
-    [('bf-while ('bf-fd! pos)
-                ('bf-inc! val)
-                ('bf-bk! pos)
-                ('bf-dec! 1))
-     `(begin (bf-copy ,pos ,val)
-             (bf-clear))]
+    [('bf-while . while-body)
+     (let ([body (once-dec-loop? while-body)])
+       (if body
+           (let ([scaned (scan-copy-loop body)])
+             (if scaned
+                 (cons 'begin scaned)
+                 (cons 'bf-while while-body)))
+           (cons 'bf-while while-body)))]    
     [else sexp]))
 
+(define (fd? x)
+  (eq? 'bf-fd! (car x)))
+(define (bk? x)
+  (eq? 'bf-bk! (car x)))
+(define (inc? x)
+  (eq? 'bf-inc! (car x)))
+(define (dec? x)
+  (eq? 'bf-dec! (car x)))
+(define (while? x)
+  (eq? 'bf-while (car x)))
+(define (val x)
+  (cadr x))
+(define (once-dec? x)
+  (and (dec? x) (= 1 (val x))))
+
+;;; 頭かおしりで - しているかどうか
+(define (once-dec-loop? while-body)
+  (cond [(once-dec? (car while-body))
+         (cdr while-body)]
+        [(once-dec? (last while-body))
+         (but-last while-body)]
+        [else #f]))
+
+(define (scan-copy-loop while-body)
+  (call/cc
+   (lambda (k)
+     (let loop ([lst while-body]
+                [fdcount 0]
+                [wait? #f]
+                [acc '()])
+       (if (null? lst)
+           (k #f)
+           (let ([x (car lst)])
+             (cond
+              [(fd? x)
+               (loop (cdr lst)
+                     (+ fdcount (val x))
+                     #t
+                     acc)]
+              [(and (inc? x) wait?)
+               (loop (cdr lst)
+                     fdcount
+                     #t
+                     (cons `(bf-copy ,fdcount ,(val x))
+                           acc))]
+              [(and (bk? x) (null? (cdr lst)) (= (val x) fdcount))
+               (reverse! (cons '(bf-clear) acc))]
+              [else (k #f)])))))))
+
+;;; whileに対しては再帰?
 (define (compile-sexp-rec sexp)
-  (if (pair? sexp)
+  (if (and (pair? sexp) (while? sexp))
       (compile-sexp (map compile-sexp-rec sexp))
       (compile-sexp sexp)))
 
