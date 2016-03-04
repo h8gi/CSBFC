@@ -3,7 +3,6 @@
 (use csbfc matchable irregex (only data-structures conc))
 (define bf-outfile (make-parameter #f))
 
-
 (define (bf-compile-file filename)
   (cond [(irregex-match "(.+)\.bf" filename) =>
          (lambda (m)
