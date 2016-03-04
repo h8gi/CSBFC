@@ -24,6 +24,4 @@ Usage: csbfc FILENAME | OPTION ...
 
 * [http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html)
 
-## todo
 
-空whileのコンパイルでバグ、出来ればコードから消したい。
