@@ -139,6 +139,8 @@
   (cadr x))
 (define (once-dec? x)
   (and (dec? x) (= 1 (val x))))
+(define (clear? x)
+  (eq? 'bf-clear (car x)))
 
 ;;; loop の 最適化
 ;;; 頭かおしりで - しているかどうか
@@ -188,12 +190,19 @@
                      bkcount
                      #t
                      acc)]
-              [(bk? x)                  ; test
+              [(bk? x)     
                (loop (cdr lst)
                      fdcount
                      (+ bkcount (val x))
                      #t
                      acc)]
+              [(clear? x)
+               (loop (cdr lst)
+                     fdcount
+                     bkcount
+                     #f
+                     (cons `(bf-clear-off ,(- fdcount bkcount))
+                           acc))]
               [else (k #f)])))))))
 
 
@@ -204,7 +213,8 @@
     [('bf-while ((or 'bf-inc!
                      'bf-dec!) n))
      '(bf-clear)]
-
+    ;; []ループの除去
+    [('bf-while) '(void)]
     [('bf-while . while-body)
      (let ([body (once-dec-loop? while-body)])
        (if body
@@ -229,3 +239,8 @@
         (for-each (lambda (sexp) (bf-display (compile-sexp-rec sexp)))
                   (->sexp str)))
       (bf-raw-compile)))
+
+;;; debug 用
+(define (compile-string str)
+  (with-input-from-string str
+    bf-compile))

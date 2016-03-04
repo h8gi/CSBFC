@@ -57,6 +57,7 @@
            (loop)))]))
   (define-syntax bf-begin
     (syntax-rules ()
+      [(_) (void)]
       [(_ expr ...)
        ;; 0 loop 対策
        (unless (fx= 0 (*pointer))
