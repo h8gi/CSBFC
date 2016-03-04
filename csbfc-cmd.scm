@@ -3,8 +3,9 @@
 (use csbfc matchable irregex (only data-structures conc))
 (define bf-outfile (make-parameter #f))
 
+
 (define (bf-compile-file filename)
-  (cond [(irregex-match "(.+)\.bf" filename) =>
+  (cond [(irregex-match "(.+)\.(?:bf|b)" filename) =>
          (lambda (m)
            (let* ([body (irregex-match-substring m 1)]
                   [outfile (string-append (or (bf-outfile) body) "_bf.scm")])
