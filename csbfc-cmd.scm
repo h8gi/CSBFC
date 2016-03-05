@@ -12,10 +12,10 @@
              (with-output-to-file outfile
                (lambda ()
                  (display "(use bf-lib)")
+                 (when (bf-debug) (newline))
                  (with-input-from-file filename
                    (lambda () (bf-compile)))))
              (system (conc "csc "
-                           (if (bf-optimize) " -O5 " "")
                            (if (bf-debug) "-profile " "")
                            outfile
                            " -o " (or (bf-outfile) body)))
@@ -26,11 +26,11 @@
 (define (usage) (display
                  #<<END
 csbfc - chicken scheme brainfuck compiler
-Usage: csbfc FILENAME | OPTION ...
+Usage: csbfc <file> | <option> ...
     -d -debug           debug mode
     -h -help            display this text and exit
-    -n -no-optimize     no optimize
-    -o <file>       write output to <file>
+    -O -O0 -O1 -O2      enable certain sets of optimization options
+    -o <file>           write output to <file>
 END
 
 (current-error-port)
@@ -41,12 +41,18 @@ END
     [((or "-h" "-help") . rest) (usage)]
     [((or "-d" "-debug") . rest)
      (bf-debug #t)
-     (main rest)]
-    [((or "-n" "-no-optimize") . rest)
-     (bf-optimize #f)
-     (main rest)]
+     (main rest)]    
     [("-o" outfile . rest)
      (bf-outfile outfile)
+     (main rest)]
+    [("-O0" . rest)
+     (bf-optimize 0)
+     (main rest)]
+    [("-O1" . rest)
+     (bf-optimize 1)
+     (main rest)]
+    [((or "-O" "-O2") . rest)
+     (bf-optimize 2)
      (main rest)]
     [(filename) (bf-compile-file filename)]
     [else (usage)]))

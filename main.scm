@@ -1,7 +1,7 @@
 (use data-structures matchable ports srfi-1 (only traversal but-last))
 ;;; main.scm    main source file
 (define bf-debug (make-parameter #f))
-(define bf-optimize (make-parameter #t))
+(define bf-optimize (make-parameter 2))
 
 (define (convert-char char)
   (case char
@@ -76,47 +76,47 @@
      [(legal? ch) ch]
      [else (skip-read-char)])))
 
-;;; stdin -> stdout
+;;; stdin -> string
+;;; まずbf文字列をrun-length圧縮するとともにS式に変換
 (define (bf-compress)
-  (let loop ([ch (skip-read-char)]
-             [run? #f]
-             [count 0])
-    (cond [(eof-object? ch)
-           (if run?
-               (bf-display (expand-char run? count))
-               (bf-display (convert-char ch)))]
-          [run?                         ; 今まで連続していた
-           (cond [(cp-char=? run? ch)   ; まだまだ連続
-                  (loop (skip-read-char) run? (+ (cp-char-score ch) count))]
-                 [(compressable? ch)    ; 連続の起点
-                  (bf-display (expand-char run? count)) ; 今までの
-                  (loop (skip-read-char) ch (cp-char-score ch))]
-                 [else                                  ; 普通に処理
-                  (bf-display (expand-char run? count)) ; 今までの
-                  (bf-display (convert-char ch))        ; 今の
-                  (loop (skip-read-char) #f 0)])]
-          [else                         ; 連続していない
-           (cond [(compressable? ch)
-                  (loop (skip-read-char) ch (cp-char-score ch))]
-                 [else
-                  (bf-display (convert-char ch))
-                  (loop (skip-read-char) #f 0)])])))
-
+  (with-output-to-string
+      (lambda () (let loop ([ch (skip-read-char)]
+                        [run? #f]
+                        [count 0])
+               (cond [(eof-object? ch)
+                      (if run?
+                          (display (expand-char run? count))
+                          (display (convert-char ch)))]
+                     [run?              ; 今まで連続していた
+                      (cond [(cp-char=? run? ch) ; まだまだ連続
+                             (loop (skip-read-char) run? (+ (cp-char-score ch) count))]
+                            [(compressable? ch) ; 連続の起点
+                             (display (expand-char run? count)) ; 今までの
+                             (loop (skip-read-char) ch (cp-char-score ch))]
+                            [else       ; 普通に処理
+                             (display (expand-char run? count)) ; 今までの
+                             (display (convert-char ch))        ; 今の
+                             (loop (skip-read-char) #f 0)])]
+                     [else              ; 連続していない
+                      (cond [(compressable? ch)
+                             (loop (skip-read-char) ch (cp-char-score ch))]
+                            [else
+                             (display (convert-char ch))
+                             (loop (skip-read-char) #f 0)])])))))
+;;; stdin -> string
 (define (bf-raw-compile)
-  (let ([ch (read-char)])
-    (unless (eof-object? ch)
-      (bf-display (convert-char ch))
-      (bf-raw-compile))))
+  (with-output-to-string
+      (lambda () (let loop ([ch (read-char)])
+               (unless (eof-object? ch)
+                 (display (convert-char ch))
+                 (loop (read-char)))))))
 
-(define (bf-display str)
-  (display str)
-  (when (bf-debug)
-    (newline)))
+
 
 ;;; S式へ変換 して 最適化 ------------------------------------------------------------
 
 ;;; 変換
-(define (->sexp str)
+(define (->sexp-seq str)
   (with-input-from-string str
     (lambda ()
       (let loop ([sexp (read)]
@@ -232,13 +232,12 @@
         [else sexp]))
 
 ;;; 標準入力から標準出力へ
-
 (define (bf-compile)
-  (if (bf-optimize)
-      (let ([str (with-output-to-string bf-compress)])
-        (for-each (lambda (sexp) (bf-display (compile-sexp-rec sexp)))
-                  (->sexp str)))
-      (bf-raw-compile)))
+  ((if (bf-debug) pp display)
+   (cons 'begin (case (bf-optimize)
+                  [(#f 0) (->sexp-seq (bf-raw-compile))]
+                  [(1)    (->sexp-seq (bf-compress))]
+                  [else   (map compile-sexp-rec (->sexp-seq (bf-compress)))]))))
 
 ;;; debug 用
 (define (compile-string str)
