@@ -28,7 +28,7 @@ csbfc - chicken scheme brainfuck compiler
 Usage: csbfc <file> | <option> ...
     -d -debug           debug mode
     -h -help            display this text and exit
-    -O <number>         enable certain sets of optimization options (0-3)
+    -O -O0 -O1 -O2 -O3  enable certain sets of optimization options
     -o <file>           write output to <file>
 
 END
@@ -45,12 +45,12 @@ END
     [("-o" outfile . rest)
      (bf-outfile outfile)
      (main rest)]
-    [("-O" (? string->number n) . rest)
-     (bf-optimize (string->number n))
+    [("-O" . rest)
+     (bf-optimize 2)
      (main rest)]
-    [("-O" notnum . rest)
-     (error "illegal optimize level" notnum)
-     (exit 1)]
+    [((and (or "-O0" "-O1" "-O2" "-O3") x) . rest)
+     (bf-optimize (string->number (string-drop x 2)))
+     (main rest)]
     ;; [(filename . rest)
     ;;  (main `(,@rest ,filename) (sub1 lim))]
     [(filename) (bf-compile-file filename)]
