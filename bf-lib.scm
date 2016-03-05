@@ -69,14 +69,14 @@
     (vector-set! tape (fx+ pointer off) 0))
   
 ;;; copy 
-  (define (bf-copy pos mul)
+  (define (bf-mul pos mul)
     (tape-inc! (fx+ pointer pos)
                (fx* (*pointer) mul)))
-  (define (bf-copy-off pos mul off)
+  (define (bf-mul-off pos mul off)
     (vector-set! tape
                  (fx+ pointer (fx+ pos off))
                  (fx* (vector-ref tape (fx+ pointer off))
-                    mul)))
+                      mul)))
 ;;; scan
   
 )

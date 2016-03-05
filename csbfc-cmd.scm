@@ -7,21 +7,21 @@
 (define (bf-compile-file filename)
   (cond [(irregex-match "(.+)\.(?:bf|b)" filename) =>
          (lambda (m)
-           (let* ([body (irregex-match-substring m 1)]
-                  [outfile (string-append (or (bf-outfile) body) "_bf.scm")])
-             (with-output-to-file outfile
+           (let* ([outfile (irregex-match-substring m 1)]
+                  [scmfile (string-append (or (bf-outfile) outfile) "_bf.scm")])
+             (with-output-to-file scmfile
                (lambda ()
                  (display "(use bf-lib)")
-                 (when (bf-debug) (newline))
-                 (with-input-from-file filename
-                   (lambda () (bf-compile)))))
+                 (newline)
+                 (when (bf-debug) (display "(time ") (newline))
+                 (with-input-from-file filename bf-compile)
+                 (when (bf-debug) (display ") ;; end of time") (newline))))
              (system (conc "csc "
                            (if (bf-debug) "-profile " "")
-                           outfile
-                           " -o " (or (bf-outfile) body)))
-             ;(system (conc "rm " outfile))
-             ))]
-        [else (error "specify .bf source file" filename)]))
+                           scmfile
+                           " -o " (or (bf-outfile) outfile)))
+             (unless (bf-debug) (system (conc "rm " scmfile)))))]
+        [else (error "specify (.bf|.b) source file" filename)]))
 
 (define (usage) (display
                  #<<END
@@ -29,8 +29,9 @@ csbfc - chicken scheme brainfuck compiler
 Usage: csbfc <file> | <option> ...
     -d -debug           debug mode
     -h -help            display this text and exit
-    -O -O0 -O1 -O2      enable certain sets of optimization options
+    -O <number>         enable certain sets of optimization options (0-3)
     -o <file>           write output to <file>
+
 END
 
 (current-error-port)
@@ -45,17 +46,15 @@ END
     [("-o" outfile . rest)
      (bf-outfile outfile)
      (main rest)]
-    [("-O0" . rest)
-     (bf-optimize 0)
+    [("-O" (? string->number n) . rest)
+     (bf-optimize (string->number n))
      (main rest)]
-    [("-O1" . rest)
-     (bf-optimize 1)
-     (main rest)]
-    [((or "-O" "-O2") . rest)
-     (bf-optimize 2)
-     (main rest)]
+    [("-O" notnum . rest)
+     (error "illegal optimize level" notnum)
+     (exit 1)]
+    ;; [(filename . rest)
+    ;;  (main `(,@rest ,filename) (sub1 lim))]
     [(filename) (bf-compile-file filename)]
     [else (usage)]))
 
 (main (command-line-arguments))
-

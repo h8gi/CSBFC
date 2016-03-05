@@ -78,7 +78,7 @@
 
 ;;; stdin -> string
 ;;; まずbf文字列をrun-length圧縮するとともにS式に変換
-(define (bf-compress)
+(define (bf-compress-read)
   (with-output-to-string
       (lambda () (let loop ([ch (skip-read-char)]
                         [run? #f]
@@ -87,7 +87,7 @@
                       (if run?
                           (display (expand-char run? count))
                           (display (convert-char ch)))]
-                     [run?              ; 今まで連続していた
+                     [run?                       ; 今まで連続していた
                       (cond [(cp-char=? run? ch) ; まだまだ連続
                              (loop (skip-read-char) run? (+ (cp-char-score ch) count))]
                             [(compressable? ch) ; 連続の起点
@@ -104,7 +104,7 @@
                              (display (convert-char ch))
                              (loop (skip-read-char) #f 0)])])))))
 ;;; stdin -> string
-(define (bf-raw-compile)
+(define (bf-raw-read)
   (with-output-to-string
       (lambda () (let loop ([ch (read-char)])
                (unless (eof-object? ch)
@@ -114,9 +114,8 @@
 
 
 ;;; S式へ変換 して 最適化 ------------------------------------------------------------
-
 ;;; 変換
-(define (->sexp-seq str)
+(define (string->sexp-seq str)
   (with-input-from-string str
     (lambda ()
       (let loop ([sexp (read)]
@@ -133,25 +132,33 @@
   (eq? 'bf-inc! (car x)))
 (define (dec? x)
   (eq? 'bf-dec! (car x)))
+(define (put? x)
+  (eq? 'bf-putc (car x)))
+(define (get? x)
+  (eq? 'bf-getc (car x)))
 (define (while? x)
   (eq? 'bf-while (car x)))
-(define (val x)
-  (cadr x))
-(define (once-dec? x)
-  (and (dec? x) (= 1 (val x))))
+(define (begin? x)
+  (eq? 'bf-begin (car x)))
+(define (mul? x)
+  (eq? 'bf-mul (car x)))
 (define (clear? x)
   (eq? 'bf-clear (car x)))
+(define (val x)
+  (cadr x))
+(define (dec-1? x)
+  (and (dec? x) (= 1 (val x))))
 
 ;;; loop の 最適化
 ;;; 頭かおしりで - しているかどうか
 (define (once-dec-loop? while-body)
-  (cond [(once-dec? (car while-body))
+  (cond [(dec-1? (car while-body))
          (cdr while-body)]
-        [(once-dec? (last while-body))
+        [(dec-1? (last while-body))
          (but-last while-body)]
         [else #f]))
 
-(define (scan-copy-loop while-body)
+(define (scan-mul-loop while-body)
   (call/cc
    (lambda (k)
      (let loop ([lst while-body]
@@ -169,14 +176,14 @@
                      fdcount
                      bkcount
                      #f
-                     (cons `(bf-copy ,(- fdcount bkcount) ,(val x))
+                     (cons `(bf-mul ,(- fdcount bkcount) ,(val x))
                            acc))]
               [(and (dec? x) wait?)
                (loop (cdr lst)
                      fdcount
                      bkcount
                      #f
-                     (cons `(bf-copy ,(- fdcount bkcount) ,(- (val x)))
+                     (cons `(bf-mul ,(- fdcount bkcount) ,(- (val x)))
                            acc))]
               
               [(and (bk? x) (null? (cdr lst)) (= (+ (val x) bkcount) fdcount))
@@ -196,17 +203,17 @@
                      (+ bkcount (val x))
                      #t
                      acc)]
-              [(clear? x)
-               (loop (cdr lst)
-                     fdcount
-                     bkcount
-                     #f
-                     (cons `(bf-clear-off ,(- fdcount bkcount))
-                           acc))]
+              ;; [(clear? x)
+              ;;  (loop (cdr lst)
+              ;;        fdcount
+              ;;        bkcount
+              ;;        #f
+              ;;        (cons `(bf-clear-off ,(- fdcount bkcount))
+              ;;              acc))]
               [else (k #f)])))))))
 
 
-(define (compile-while sexp)
+(define (optimize-while sexp)
   (match sexp
     ;; [-] などを (bf-clear) に変換
     ;; [+]もどうせ無限ループなのでclearする
@@ -218,7 +225,7 @@
     [('bf-while . while-body)
      (let ([body (once-dec-loop? while-body)])
        (if body
-           (let ([scaned (scan-copy-loop body)])
+           (let ([scaned (scan-mul-loop body)])
              (if scaned
                  (cons 'bf-begin scaned)
                  sexp))
@@ -226,18 +233,53 @@
     [else sexp]))
 
 ;;; whileに対しては再帰?
-(define (compile-sexp-rec sexp)
+(define (optimize-while-rec sexp)
   (cond [(and (pair? sexp) (while? sexp))
-         (compile-while (map compile-sexp-rec sexp))]
+         (optimize-while (map optimize-while-rec sexp))]
         [else sexp]))
+
+
+;;; fdやbkなどによる移動を 実際には行わず
+;;; 引数として与えることによる最適化 (offset optimize)
+(define (optimize-offset sexp-seq #!optional (off 0))
+  (let loop ([seq sexp-seq]
+             [off off]
+             [acc '()])
+    (if (null? seq) (reverse! acc)
+        (let ([x (car seq)])
+          (cond [(fd? x)    (loop (cdr seq) (+ off (val x)) acc)]
+                [(bk? x)    (loop (cdr seq) (- off (val x)) acc)]
+                [(while? x) (loop (cdr seq) 0
+                                  (cons x (cons (if (positive? off) `(bf-fd! ,off) `(bf-bk! ,(fxneg off)))
+                                                acc)))]
+                [(inc? x) (loop (cdr seq) off
+                                (cons `(bf-inc!-off ,(val x) ,off) acc))]
+                [(dec? x) (loop (cdr seq) off
+                                (cons `(bf-dec!-off ,(val x) ,off) acc))]
+                [(get? x) (loop (cdr seq) off
+                                (cons `(bf-getc-off ,off) acc))]
+                [(put? x) (loop (cdr seq) off
+                                (cons `(bf-putc-off ,off) acc))]
+                [(begin? x) (loop (cdr seq) off
+                                  (cons `(bf-begin ,@(optimize-offset (cdr x) off)) acc))]
+                [(mul? x) (loop (cdr seq) off
+                                (cons `(bf-mul-off ,(second x) ,(third x) ,off)
+                                      acc))]
+                [(clear? x) (loop (cdr seq) off
+                                  (cons `(bf-clear-off ,off) acc))]
+                [else (error "cant optimize offset")])))))
+
+
 
 ;;; 標準入力から標準出力へ
 (define (bf-compile)
-  ((if (bf-debug) pp display)
-   (cons 'begin (case (bf-optimize)
-                  [(#f 0) (->sexp-seq (bf-raw-compile))]
-                  [(1)    (->sexp-seq (bf-compress))]
-                  [else   (map compile-sexp-rec (->sexp-seq (bf-compress)))]))))
+  (for-each
+   pp
+   (case (bf-optimize)
+     [(#f 0) (string->sexp-seq (bf-raw-read))]
+     [(1)    (string->sexp-seq (bf-compress-read))]
+     [(2)    (map optimize-while-rec (string->sexp-seq (bf-compress-read)))]
+     [else   (optimize-offset (map optimize-while-rec (string->sexp-seq (bf-compress-read))))])))
 
 ;;; debug 用
 (define (compile-string str)
