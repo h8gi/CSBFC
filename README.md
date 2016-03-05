@@ -7,6 +7,7 @@ chicken scheme brainfuck compiler
 * `+`と`-`の連続、`<`と`>`の連続をrun-length圧縮
 * `[-]`などのクリアループを最適化
 * `[->>>++>>-<<<<<]`のようなかけ算を目的としたループの最適化(見逃しがありそう)
+* offset optimization: ポインタの移動を引数に
 
 ## Usage
 
