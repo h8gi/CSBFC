@@ -15,10 +15,11 @@ chicken scheme brainfuck compiler
 
 ~~~~~{.sh}
 csbfc - chicken scheme brainfuck compiler
-Usage: csbfc FILENAME | OPTION ...
-    -h -help            display this text and exit
-    -n -no-optimize     no optimize
+Usage: csbfc <file> | <option> ...
     -d -debug           debug mode
+    -h -help            display this text and exit
+    -O <number>         enable certain sets of optimization options (0-3)
+    -o <file>           write output to <file>
 ~~~~~
 
 ## 参考サイト 
