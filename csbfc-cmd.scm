@@ -17,7 +17,6 @@
                  (with-input-from-file filename bf-compile)
                  (when (bf-debug) (display ") ;; end of time") (newline))))
              (system (conc "csc "
-                           (if (bf-debug) "-profile " "")
                            scmfile
                            " -o " (or (bf-outfile) outfile)))
              (unless (bf-debug) (system (conc "rm " scmfile)))))]
